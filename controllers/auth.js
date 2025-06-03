@@ -3,12 +3,12 @@ const Usuario = require("../models/usuario");
 const bcryptjs = require("bcryptjs");
 
 const login = async (req, res)=>{
-    const {correo, contra } = req.body;
+    const {cedula, contra } = req.body;
 
     try {
         //verificar si el usuario esta activo
         const usuario = await Usuario.findOne({
-            where:{correo}
+            where:{cedula}
         });
         if(!usuario){
             return res.status(401).json({
