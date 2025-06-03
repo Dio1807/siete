@@ -1,40 +1,62 @@
 const { DataTypes } = require("sequelize");
 const db = require("../db/connection");
+const AsientoCabecera = require("./asiento_cabecera");
 const Cuenta = require("./cuenta");
 
-const DetalleAsiento = db.define('DetalleAsiento', {
+const AsientoDetalle = db.define('AsientoDetalle', {
     id_detalle: { 
-        type: DataTypes.INTEGER.UNSIGNED, 
+        type: DataTypes.INTEGER, 
         primaryKey: true, 
         autoIncrement: true 
     },
     id_asiento: { 
-        type: DataTypes.INTEGER.UNSIGNED, 
+        type: DataTypes.INTEGER, 
         allowNull: false 
     },
     id_cuenta: { 
         type: DataTypes.INTEGER, 
         allowNull: false 
     },
-    monto: { 
+    debe: { 
         type: DataTypes.DECIMAL(15, 2), 
-        allowNull: false 
+        allowNull: false, 
+        defaultValue: 0.00 
     },
-    tipo_movimiento: { 
-        type: DataTypes.ENUM('D', 'C'), 
-        allowNull: false 
+    haber: { 
+        type: DataTypes.DECIMAL(15, 2), 
+        allowNull: false, 
+        defaultValue: 0.00 
     },
-    descripcion: { 
+    concepto: { 
         type: DataTypes.STRING(100), 
         allowNull: true 
     }
 }, {
-    timestamps: false,
-    tableName: 'detalle_asiento'
+    timestamps: true,
+    tableName: 'asiento_detalle'
 });
 
 // Relaciones
-DetalleAsiento.belongsTo(Cuenta, { foreignKey: 'id_cuenta' });
-Cuenta.hasMany(DetalleAsiento, { foreignKey: 'id_cuenta' });
+AsientoDetalle.belongsTo(AsientoCabecera, {
+    foreignKey: 'id_asiento',
+    as: 'asientoCabecera',
+    onDelete: 'CASCADE'
+});
 
-module.exports = DetalleAsiento;
+AsientoDetalle.belongsTo(Cuenta, {
+    foreignKey: 'id_cuenta',
+    as: 'cuenta'
+});
+
+// Relaciones inversas
+AsientoCabecera.hasMany(AsientoDetalle, {
+    foreignKey: 'id_asiento',
+    as: 'asientoDetalles'
+});
+
+Cuenta.hasMany(AsientoDetalle, {
+    foreignKey: 'id_cuenta',
+    as: 'asientoDetalles'
+});
+
+module.exports = AsientoDetalle;
