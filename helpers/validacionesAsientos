@@ -1,0 +1,177 @@
+const AsientoCabecera = require("../models/asiento_cabecera");
+const Cuenta = require("../models/cuenta");
+const Empresa = require("../models/empresa");
+const { Op } = require('sequelize');
+
+// Verificar que exista un asiento con el ID proporcionado
+const existeAsientoId = async (id = "") => {
+    const asiento = await AsientoCabecera.findByPk(id);
+    if (!asiento) {
+        throw new Error(`No existe un asiento con id: ${id}`);
+    }
+};
+
+// Verificar que no exista un asiento con el mismo número para la empresa
+const numeroAsientoUnico = async (numero_asiento = "", { req }) => {
+    const { id_empresa } = req.body;
+    const asientoId = req.params.id;
+    
+    const whereClause = {
+        numero_asiento,
+        id_empresa
+    };
+    
+    // Si es una actualización, excluir el asiento actual
+    if (asientoId) {
+        whereClause.id_asiento = {
+            [Op.ne]: asientoId
+        };
+    }
+    
+    const asientoExiste = await AsientoCabecera.findOne({ where: whereClause });
+    if (asientoExiste) {
+        throw new Error(`Ya existe un asiento con el número ${numero_asiento} para esta empresa`);
+    }
+};
+
+// Verificar que la empresa exista
+const existeEmpresaAsiento = async (id_empresa = "") => {
+    const empresa = await Empresa.findByPk(id_empresa);
+    if (!empresa) {
+        throw new Error(`No existe una empresa con id: ${id_empresa}`);
+    }
+    
+    if (!empresa.estado) {
+        throw new Error('La empresa no está activa');
+    }
+};
+
+// Validar que el tipo de asiento sea válido
+const esTipoAsientoValido = (id_tipo_asiento = "") => {
+    const tiposValidos = ['Manual', 'Compra', 'Venta', 'Ajuste'];
+    if (!tiposValidos.includes(id_tipo_asiento)) {
+        throw new Error("El tipo de asiento debe ser: Manual, Compra, Venta o Ajuste");
+    }
+    return true;
+};
+
+// Validar que el estado sea válido
+const esEstadoValido = (estado = "") => {
+    const estadosValidos = ['pendiente', 'procesado'];
+    if (!estadosValidos.includes(estado)) {
+        throw new Error("El estado debe ser: pendiente o procesado");
+    }
+    return true;
+};
+
+// Validar que la fecha no sea futura
+const fechaValida = (fecha = "") => {
+    const fechaAsiento = new Date(fecha);
+    const fechaActual = new Date();
+    fechaActual.setHours(23, 59, 59, 999); // Fin del día actual
+    
+    if (fechaAsiento > fechaActual) {
+        throw new Error("La fecha del asiento no puede ser futura");
+    }
+    return true;
+};
+
+// Validar estructura de detalles del asiento
+const validarDetallesAsiento = async (detalles = []) => {
+    if (!Array.isArray(detalles) || detalles.length === 0) {
+        throw new Error("Debe proporcionar al menos un detalle para el asiento");
+    }
+
+    let totalDebe = 0;
+    let totalHaber = 0;
+    const cuentasUtilizadas = new Set();
+
+    for (const detalle of detalles) {
+        // Validar que tenga los campos requeridos
+        if (!detalle.id_cuenta) {
+            throw new Error("Cada detalle debe tener un id_cuenta");
+        }
+
+        // Verificar que la cuenta exista y sea asentable
+        const cuenta = await Cuenta.findByPk(detalle.id_cuenta);
+        if (!cuenta) {
+            throw new Error(`La cuenta con id ${detalle.id_cuenta} no existe`);
+        }
+
+        if (cuenta.asentable === 'No') {
+            throw new Error(`La cuenta "${cuenta.nombre}" no es asentable`);
+        }
+
+        // Validar montos
+        const debe = parseFloat(detalle.debe || 0);
+        const haber = parseFloat(detalle.haber || 0);
+
+        if (debe < 0 || haber < 0) {
+            throw new Error("Los montos no pueden ser negativos");
+        }
+
+        if (debe === 0 && haber === 0) {
+            throw new Error("Cada detalle debe tener un monto en debe o haber");
+        }
+
+        if (debe > 0 && haber > 0) {
+            throw new Error("Un detalle no puede tener monto en debe y haber al mismo tiempo");
+        }
+
+        totalDebe += debe;
+        totalHaber += haber;
+
+        // Evitar cuentas duplicadas en el mismo asiento
+        if (cuentasUtilizadas.has(detalle.id_cuenta)) {
+            throw new Error(`La cuenta ${cuenta.nombre} está duplicada en el asiento`);
+        }
+        cuentasUtilizadas.add(detalle.id_cuenta);
+    }
+
+    // Validar que el asiento esté balanceado
+    if (Math.abs(totalDebe - totalHaber) > 0.01) {
+        throw new Error("El asiento no está balanceado. La suma del debe debe ser igual a la suma del haber");
+    }
+
+    return true;
+};
+
+// Validar que se pueda modificar el asiento
+const puedeModificarAsiento = async (id = "") => {
+    const asiento = await AsientoCabecera.findByPk(id);
+    if (!asiento) {
+        throw new Error(`No existe un asiento con id: ${id}`);
+    }
+
+    if (asiento.estado === 'procesado') {
+        throw new Error("No se puede modificar un asiento que ya está procesado");
+    }
+
+    return true;
+};
+
+// Validar que se pueda eliminar el asiento
+const puedeEliminarAsiento = async (id = "") => {
+    const asiento = await AsientoCabecera.findByPk(id);
+    if (!asiento) {
+        throw new Error(`No existe un asiento con id: ${id}`);
+    }
+
+    if (asiento.estado === 'procesado') {
+        throw new Error("No se puede eliminar un asiento que ya está procesado");
+    }
+
+    return true;
+};
+
+module.exports = {
+    existeAsientoId,
+    numeroAsientoUnico,
+    existeEmpresaAsiento,
+    esTipoAsientoValido,
+    esEstadoValido,
+    fechaValida,
+    validarDetallesAsiento,
+    puedeModificarAsiento,
+    puedeEliminarAsiento
+};
