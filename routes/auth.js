@@ -7,8 +7,9 @@ const { login } = require("../controllers/auth");
 const router = Router();
 
 router.post('/login',[
-    check('correo', 'El correo no es valido').isEmail(),
-    check('contra', 'La contraseña es obligatorio').not().isEmpty(),
+    check('cedula', 'La cédula no es valida').not().isEmpty(),
+    //check('correo', 'El correo no es valido').isEmail(),
+    check('contra', 'La contraseña es obligatoria').not().isEmpty(),
     validar
 ], login);
 
