@@ -14,6 +14,7 @@ class Server {
         this.rolesR = '/api/roles';
         this.periodosR = '/api/periodos';
         this.cuentasR = '/api/cuentas'; // Nueva ruta para cuentas
+        this.reportesR = '/api/reportes'; // Nueva ruta para reportes
         
         this.dbConnection();
         this.middleware();
@@ -46,6 +47,7 @@ class Server {
         this.app.use(this.rolesR, require('./../routes/roles'));
         this.app.use(this.periodosR, require('./../routes/periodos'));
         this.app.use(this.cuentasR, require('./../routes/cuentas')); // Nueva ruta para cuentas
+        this.app.use(this.reportesR, require('./../routes/reportes')); // Nueva ruta para reportes
     }
 
     
