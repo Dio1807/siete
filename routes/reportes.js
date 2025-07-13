@@ -4,7 +4,7 @@ const { validar } = require("../middlewares/validarCampos");
 const { validarJWT } = require("../middlewares/validarJWT");
 const { 
     generarReporteFactura, 
-    generarReporteAsientos, 
+    generarReporteBalanceSumasSaldos, 
     listarReportes 
 } = require("../controllers/reportes");
 
@@ -20,11 +20,15 @@ router.get('/factura/:id', [
     // validarJWT
 ], generarReporteFactura);
 
-// Generar reporte de asientos contables - GET /api/reportes/asientos
-router.get('/asientos', [
-    check('id_empresa', 'El ID de empresa es requerido').not().isEmpty(),
+// Generar Balance de Sumas y Saldos - GET /api/reportes/balance-sumas-saldos
+router.get('/balance-sumas-saldos', [
+    check('IDEMPRESA', 'El parámetro IDEMPRESA es requerido').not().isEmpty(),
+    check('DESDE', 'El parámetro DESDE es requerido').not().isEmpty(),
+    check('HASTA', 'El parámetro HASTA es requerido').not().isEmpty(),
+    check('DESDE', 'DESDE debe tener formato YYYY-MM-DD').matches(/^\d{4}-\d{2}-\d{2}$/),
+    check('HASTA', 'HASTA debe tener formato YYYY-MM-DD').matches(/^\d{4}-\d{2}-\d{2}$/),
     validar,
     // validarJWT
-], generarReporteAsientos);
+], generarReporteBalanceSumasSaldos);
 
 module.exports = router;

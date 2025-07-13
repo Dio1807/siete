@@ -143,29 +143,51 @@ const generarReporteFactura = async (req, res) => {
 /**
  * Controlador para reporte de asientos contables
  */
-const generarReporteAsientos = async (req, res) => {
+const generarReporteBalanceSumasSaldos = async (req, res) => {
     try {
-        const { id_empresa, fecha_desde, fecha_hasta } = req.query;
+        const { IDEMPRESA, DESDE, HASTA } = req.query;
 
         // Validaciones
-        if (!id_empresa) {
+        if (!IDEMPRESA) {
             return res.status(400).json({ msg: 'El ID de empresa es requerido' });
+        }
+        
+        if (!DESDE || !HASTA) {
+            return res.status(400).json({ 
+                msg: 'Las fechas DESDE y HASTA son requeridas' 
+            });
+        }
+
+        // Validar formato de fechas (YYYY-MM-DD)
+        const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!fechaRegex.test(DESDE) || !fechaRegex.test(HASTA)) {
+            return res.status(400).json({ 
+                msg: 'Las fechas deben tener formato YYYY-MM-DD' 
+            });
+        }
+
+        // Validar que DESDE sea menor o igual a HASTA
+        if (new Date(DESDE) > new Date(HASTA)) {
+            return res.status(400).json({ 
+                msg: 'La fecha DESDE debe ser menor o igual a HASTA' 
+            });
         }
 
         // Parámetros para el reporte
         const parametros = {
-            ID_EMPRESA: id_empresa,
-            FECHA_DESDE: fecha_desde || '2024-01-01',
-            FECHA_HASTA: fecha_hasta || new Date().toISOString().split('T')[0],
-            TITULO_REPORTE: 'Reporte de Asientos Contables'
+            IDEMPRESA: IDEMPRESA,
+            DESDE: DESDE,
+            HASTA: HASTA
         };
 
-        // Generar reporte usando conexión directa a BD
-        const pdfPath = await generateJasperReport('asientos_contables', parametros);
+        console.log('Generando Balance de Sumas y Saldos con parámetros:', parametros);
+
+        // Generar reporte usando conexión directa a BD (nombre del archivo .jasper sin extensión)
+        const pdfPath = await generateJasperReport('balance_sumas_saldos', parametros);
 
         // Configurar headers
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="asientos_${id_empresa}.pdf"`);
+        res.setHeader('Content-Disposition', `inline; filename="balance_sumas_saldos_${IDEMPRESA}_${DESDE}_${HASTA}.pdf"`);
 
         // Enviar archivo
         res.sendFile(pdfPath, (err) => {
@@ -183,9 +205,9 @@ const generarReporteAsientos = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error generando reporte de asientos:', error);
+        console.error('Error generando Balance de Sumas y Saldos:', error);
         res.status(500).json({ 
-            msg: 'Error al generar el reporte de asientos',
+            msg: 'Error al generar el Balance de Sumas y Saldos',
             error: error.message 
         });
     }
@@ -258,6 +280,6 @@ const listarReportes = async (req, res) => {
 
 module.exports = {
     generarReporteFactura,
-    generarReporteAsientos,
+    generarReporteBalanceSumasSaldos,
     listarReportes
 };
